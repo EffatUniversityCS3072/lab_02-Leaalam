@@ -1,7 +1,7 @@
 ---
 title: "Lab 02"
-subtitle: "CS3172-1, Spring 2023, Effat University"
-author: ""
+subtitle: "CS3072-1, Spring 2023, Effat University"
+author: "Leena Alam"
 output: pdf_document
 ---
 
@@ -23,46 +23,77 @@ cas <- read_rds("data/canada_survey.rds")
 ## Task 1
 
 ```{r}
+cas <- filter(cas, energy_expense>0, household_income>0)
 ```
 
 ```{r}
+cas$marital_status <- factor(cas$marital_status, levels = c(1,2,3,4), labels = c("Single", "Married", "Divorced", "Widowed"))
 ```
 
 ## Task 2
 
 ```{r}
+cas <- cas %>% mutate(heat_equip = case_when(
+  heat_equip == 1 ~ "steam",
+  heat_equip == 2 ~ "forced air",
+  heat_equip == 3 ~ "stove",
+  heat_equip == 4 ~ "electric heating"))
 ```
 
 ```{r}
+cas <- cas %>% mutate(heat_fuel = case_when(
+  heat_fuel == 1 ~ "oil",
+  heat_fuel == 2 ~ "gas",
+  heat_fuel == 3 ~ "electricity",
+  heat_fuel == 4 ~ "other"))
 ```
 
 ## Task 3
 
 ```{r}
+cas_summary <- cas %>% group_by(heat_fuel, heat_equip) %>% summarize(mean_energy_expense = mean(energy_expense), median_energy_expense = median(energy_expense), sd_energy_expense = sd(energy_expense))
+  
+print(cas_summary)
 ```
 
 - Provide the answer to the theoretical questions here
 
+According to the summarized table, the oil (heat_fuel) and stove (heat_equip) combination has the highest energy expense.
+
+The highest variability was shown for the other (heat_fuel) and steam (heat_equip) according to the standard variation column. 
+
+Electric heating is not supported by every type of heating fuel.
+
 ## Task 4
 
 ```{r}
+library(scales)
+
+ggplot(cas, aes(x = heat_fuel, y = energy_expense, fill = heat_fuel)) + geom_bar(stat = "summary", fun = "mean", position = "dodge") + facet_grid(.~heat_equip) + scale_y_continuous(labels = dollar_format()) + labs(x = "Heating Fuel Type", y = "Energy Expense ($)", fill = "Heating Fuel Type")
+
 ```
 
 ## Task 5
 
 ```{r}
+cas_summary2 <- cas %>% mutate(prop_energy_income = energy_expense / household_income) %>% arrange(prop_energy_income) %>% slice(c(1L, n())) %>% glimpse()
 ```
+
+The respondent with the lowest proportion of their household income on energy is living in Ontario in an apartment and is divorced. The respondent with the highest proportion is living in Saskatchewan in a single detached house and is also divorced, however, this person's household income is very low and energy expense is very high which explains why they have a high proportion.
 
 ## Task 6
 
-```{r message=FALSE}
+```{r}
+cas_summary3 <- cas %>% group_by(year, province) %>% summarize(median_energy_expense_per_room = median(energy_expense / rooms)) %>% group_by(year) %>% filter(median_energy_expense_per_room == min(median_energy_expense_per_room)) %>% select(year, province, median_energy_expense_per_room)
 ```
 
 ## Task 7
 
-```{r fig.width=7, fig.height=6, message=FALSE}
+```{r fig.width=7, fig.height=6}
+
+cas_summary4 <- cas %>% mutate(prop_energy_income = energy_expense / household_income) %>% arrange(prop_energy_income) %>% group_by(age, education) %>% mutate(is_energy_vulnerable = prop_energy_income > 0.05) %>% summarize(prop_energy_vulnerable = mean(is_energy_vulnerable))
+
+ggplot(cas_summary4, aes(x = education, y = age, fill = prop_energy_vulnerable)) + geom_raster() + scale_fill_gradient(low = "white", high = "red") + labs(x = "Education", y = "Age", fill = "Proportion Energy Vulnerable") + theme_bw()
 ```
 
-## Task 8
-
-
+As we can observe from the plot above, the most vulnerable age group is 85 years old or more. The plot shows that the least vulnerable people are those who are 25 years old or younger with a University degree that higher than a Bachelors degree. Also those individuals who are 25 years old or younger with no proper education are also somewhat vulnerable. 
